@@ -46,24 +46,52 @@ def create_planet():
 
     return make_response(f"Planet {new_planet.name} successfully created", 201)
 
-# @planets_bp.route("/<planet_id>", methods=["GET"])
-# def get_one_planet(planet_id):
-#     planet = validate(planet_id)
-#     return jsonify(
-#             {"id": planet.id,
-#             "name": planet.name,
-#             "description": planet.description,
-#             "size": planet.size
-#             }
-#         )
+@planets_bp.route("/<planet_id>", methods=["GET"])
+def get_one_planet(planet_id):
+    planet = validate(planet_id)
+    return jsonify(
+            {"id": planet.id,
+            "name": planet.name,
+            "description": planet.description,
+            "size": planet.size
+            }
+        )
 
-# def validate(planet_id):
-#     try:
-#         planet_id = int(planet_id)
-#     except ValueError:
-#         abort(make_response({"message": f"Invalid planet id: '{planet_id}'"}, 400))
+def validate(planet_id):
+    try:
+        planet_id = int(planet_id)
+    except:
+        abort(make_response({"message": f"Invalid planet id: '{planet_id}'"}, 400))
+    planet = Planet.query.get(planet_id)
+    if planet:
+        return planet
 
-#     for planet in planets:
-#         if planet_id == planet.id:
-#             return planet
-#     abort(make_response({"message": f'planet id {planet_id} not found'}, 404))
+    abort(make_response({"message": f'planet id {planet_id} not found'}, 404))
+
+
+@planets_bp.route("/<planet_id>", methods=["PUT"])
+def update_planet(planet_id):
+    planet = validate(planet_id)
+    request_body = request.get_json()
+    if "name" not in request_body or \
+        "description" not in request_body \
+        or "size" not in request_body:
+        return jsonify({'msg': f"Request must include name, description, and size"})
+
+    planet.name = request_body["name"]
+    planet.description = request_body["description"]
+    planet.size = request_body["size"]
+
+    db.session.commit()
+
+    return jsonify({'msg': f"Planet {planet_id} update successful!"})
+
+
+@planets_bp.route("/<planet_id>", methods=["DELETE"])
+def delete_planet(planet_id):
+    planet = validate(planet_id)
+
+    db.session.delete(planet)
+    db.session.commit()
+
+    return make_response(f"Planet #{planet.id} successfully deleted")
