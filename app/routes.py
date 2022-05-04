@@ -2,25 +2,36 @@ from flask import Blueprint, jsonify, abort, make_response, request
 from app.models.planet import Planet
 from app import db
 
-
-# class Planet: 
-#     def __init__(self, id, name, description, size):
-#         self.id = id
-#         self.name = name
-#         self.description = description
-#         self.size = size
-
-# planets = [
-#     Planet(1, "Venus", "67 miles from the sun", "3,760.4 miles"),
-#     Planet(2, "Mercury", "36 million miles from the sun", "1,516 miles"),
-#     Planet(3, "Earth", "92,960,000 miles from the sun", "3,963 miles")
-# ]
-
 planets_bp = Blueprint("planets", __name__, url_prefix="/planets")
+
+def validate(planet_id):
+    try:
+        planet_id = int(planet_id)
+    except:
+        abort(make_response({"message": f"Invalid planet id: '{planet_id}'"}, 400))
+    planet = Planet.query.get(planet_id)
+    if planet:
+        return planet
+
+    abort(make_response({"message": f'planet id {planet_id} not found'}, 404))
 
 @planets_bp.route("", methods=["GET"])
 def get_all_planet():
-    planets = Planet.query.all()
+    #planets = Planet.query.all()
+    params = request.args
+    if "name" in params and "description" in params:
+        planet_name = params["name"]
+        planet_description = params["description"]
+        planets = Planet.query.filter_by(name = planet_name, description = planet_description)
+    elif "description" in params:
+        planet_description = params["description"]
+        planets = Planet.query.filter_by(description = planet_description)
+    elif "name" in params:
+        planet_name = params["name"]
+        planets = Planet.query.filter_by(name = planet_name)
+    else:
+        planets = Planet.query.all()
+
     response = []
     for planet in planets:
         response.append(
@@ -30,11 +41,9 @@ def get_all_planet():
             "size": planet.size
             }
         )
-    
     return jsonify(response)
 
 @planets_bp.route("", methods=["POST"])
-
 def create_planet():
     request_body = request.get_json()
     new_planet = Planet(name=request_body["name"],
@@ -56,18 +65,6 @@ def get_one_planet(planet_id):
             "size": planet.size
             }
         )
-
-def validate(planet_id):
-    try:
-        planet_id = int(planet_id)
-    except:
-        abort(make_response({"message": f"Invalid planet id: '{planet_id}'"}, 400))
-    planet = Planet.query.get(planet_id)
-    if planet:
-        return planet
-
-    abort(make_response({"message": f'planet id {planet_id} not found'}, 404))
-
 
 @planets_bp.route("/<planet_id>", methods=["PUT"])
 def update_planet(planet_id):
